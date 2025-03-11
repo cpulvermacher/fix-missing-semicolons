@@ -1,0 +1,41 @@
+name: Release
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - v*.*.*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+    - uses: pnpm/action-setup@fe02b34f77f8bc703788d5817da081398fad5dd2 # v4
+      with:
+        version: 9
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'pnpm'
+    - run: pnpm i
+    - run: pnpm unit
+    - run: pnpm lint
+    - run: pnpm pretest
+    - run: xvfb-run -a pnpm test
+      if: runner.os == 'Linux'
+    - run: pnpm test
+      if: runner.os != 'Linux'
+    - run: pnpm audit --production
+    - run: pnpm build
+    - name: Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      run: >-
+        bash .github/workflows/release.sh ${{ github.ref_name }}

@@ -1,0 +1,19 @@
+{
+    "files.exclude": {
+        "out": true
+    },
+    "search.exclude": {
+        "out": true
+    },
+    "typescript.tsc.autoDetect": "off",
+    "typescript.format.semicolons": "insert",
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[yaml]": {
+        "editor.formatOnSave": false
+    },
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always"
+    }
+}

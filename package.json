@@ -1,0 +1,68 @@
+{
+  "name": "lgtm",
+  "displayName": "LGTM - AI Code Review",
+  "description": "Review source code changes in Git using GitHub Copilot Chat",
+  "publisher": "cpulvermacher",
+  "version": "0.13.5",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cpulvermacher/lgtm.git"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "ai",
+    "chat",
+    "copilot",
+    "git",
+    "review"
+  ],
+  "icon": "images/icon.png",
+  "license": "SEE LICENSE IN LICENSE",
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": { },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "check-exclusive": "ps aux | grep -v grep | grep -q 'esbuild.*--watch' && echo 'esbuild --watch running, aborting!' && exit 1 || exit 0",
+    "vscode:prepublish": "pnpm check-exclusive && rm -rf ./out && pnpm esbuild-base --minify --pure:console.debug",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --define:__GIT_VERSION__=\\\"$GIT_VERSION\\\"",
+    "esbuild": "pnpm esbuild-base --sourcemap",
+    "watch": "pnpm esbuild-base --sourcemap --watch",
+    "dev": "GIT_VERSION=$(git describe  --tags --long) pnpm build",
+    "build": "npx vsce package --no-dependencies",
+    "pretest": "tsc -p ./",
+    "lint": "tsc --noEmit && eslint src && prettier src --check",
+    "test": "node ./out/test/runTest.js",
+    "unit": "vitest run ./src/test/unit/**/*.test.ts",
+    "checkall": "pnpm unit && pnpm test && pnpm lint && pnpm build"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.96.0",
+    "@vitest/coverage-v8": "^3.0.8",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.2",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.22.0",
+    "glob": "^11.0.1",
+    "mocha": "^11.1.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.26.1",
+    "vitest": "^3.0.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "esbuild@<=0.24.2": ">=0.25.0"
+    }
+  }
+}

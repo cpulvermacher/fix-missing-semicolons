@@ -1,0 +1,7 @@
+# ignore all files
+**
+# whitelist included files
+!LICENSE
+!CHANGELOG.md
+!images/icon.png
+!out/extension.js
