@@ -51,7 +51,7 @@ suite('Extension ', () => {
     }
 
     async function waitForDiagnostics(testFileUri: vscode.Uri) {
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
             const disposable = vscode.languages.onDidChangeDiagnostics((e) => {
                 if (
                     e.uris.some(
@@ -71,8 +71,8 @@ suite('Extension ', () => {
             // Set a timeout as a fallback
             setTimeout(() => {
                 disposable.dispose();
-                resolve();
-            }, 10000);
+                reject(new Error('Timed out waiting for diagnostics'));
+            }, 18000);
         });
 
         // Now wait a bit to ensure extension has processed the diagnostics
