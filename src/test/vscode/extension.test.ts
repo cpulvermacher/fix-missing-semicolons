@@ -44,6 +44,7 @@ suite('Extension ', () => {
         const testFileUri = vscode.Uri.file(
             tempDir + `/test${randomSuffix}.java`
         );
+        console.log(`Writing test file to ${testFileUri.fsPath}...`);
 
         await vscode.workspace.fs.writeFile(testFileUri, Buffer.from(content));
         return testFileUri;
@@ -60,6 +61,7 @@ suite('Extension ', () => {
                     const diagnostics =
                         vscode.languages.getDiagnostics(testFileUri);
                     if (diagnostics.length > 0) {
+                        console.log(`Found ${diagnostics.length} diagnostics`);
                         disposable.dispose();
                         resolve();
                     }
