@@ -14,10 +14,18 @@ suite('Extension ', () => {
     let tempDir: string;
 
     before(async () => {
+        // redhat is not a trusted publisher, so add it to the whitelist first
+        const config = vscode.workspace.getConfiguration();
+        await config.update(
+            'extensions.allowed',
+            { 'redhat.java': true },
+            vscode.ConfigurationTarget.Global
+        );
+
+        // install java
         await vscode.commands.executeCommand(
             'workbench.extensions.installExtension',
-            'redhat.java',
-            { isMachineScoped: true } // needed to avoid 'do you trust this publisher' prompt
+            'redhat.java'
         );
         console.log(`redhat.java installed successfully.`);
 
