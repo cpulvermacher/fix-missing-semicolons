@@ -43,6 +43,9 @@
     "unit": "vitest run ./src/test/unit/**/*.test.ts",
     "checkall": "pnpm unit && pnpm test && pnpm lint && pnpm build"
   },
+  "extensionDependencies": [
+    "redhat.java"
+  ],
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
