@@ -25,7 +25,6 @@ export function activate(context: vscode.ExtensionContext) {
             }
 
             const diagnostics = vscode.languages.getDiagnostics(activeDocUri);
-            console.debug('Diagnostics:', diagnostics);
 
             const errors = diagnostics.filter(
                 (d) =>
