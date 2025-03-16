@@ -7,4 +7,4 @@ coverage
 
 images/*
 !images/icon.png
-!images/icon.xcf
+!images/icon.svg
