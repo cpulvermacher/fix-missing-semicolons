@@ -38,18 +38,9 @@ export function activate(context: vscode.ExtensionContext) {
             );
 
             if (allMissingSemicolonErrors && errors.length > 0) {
-                vscode.window.withProgress(
-                    {
-                        location: vscode.ProgressLocation.Notification,
-                        title: 'Fixing missing semicolons...',
-                        cancellable: false,
-                    },
-                    async () => {
-                        for (const diagnostic of errors) {
-                            await applyFix(activeDocUri, diagnostic);
-                        }
-                    }
-                );
+                for (const diagnostic of errors) {
+                    applyFix(activeDocUri, diagnostic);
+                }
             }
         })
     );
@@ -68,7 +59,10 @@ function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
 }
 
 //TODO avoid messing with the user entering ; themselves
-function applyFix(activeDocUri: vscode.Uri, diagnostic: vscode.Diagnostic) {
+function applyFix(
+    activeDocUri: vscode.Uri,
+    diagnostic: vscode.Diagnostic
+): Thenable<boolean> {
     const edit = new vscode.WorkspaceEdit();
     edit.insert(activeDocUri, diagnostic.range.end, ';');
     return vscode.workspace.applyEdit(edit);
