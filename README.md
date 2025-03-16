@@ -1,3 +1,3 @@
-# ...
+# Fix Missing Semicolons
 
-TODO
+Automatically fix missing semicolons in Java without user interactions.

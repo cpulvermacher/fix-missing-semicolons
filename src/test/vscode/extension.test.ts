@@ -1,24 +1,100 @@
 import assert from 'assert';
+import { mkdtempSync } from 'fs';
+import { after, before, suite, test } from 'mocha';
+import { tmpdir } from 'os';
 import * as vscode from 'vscode';
 
+const javaCode = `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+    }
+}`;
+
 suite('Extension ', () => {
-    test('activates', async () => {
-        console.log(`Installing copilot chat...`);
+    let tempDir: string;
+
+    before(async () => {
         await vscode.commands.executeCommand(
             'workbench.extensions.installExtension',
-            'github.copilot-chat'
+            'redhat.java',
+            { isMachineScoped: true } // needed to avoid 'do you trust this publisher' prompt
         );
-        console.log(`github.copilot-chat installed successfully.`);
+        console.log(`redhat.java installed successfully.`);
 
-        const extension =
-            vscode.extensions.getExtension<unknown>('cpulvermacher.lgtm');
-        if (!extension) {
-            throw new Error('Extension not found');
-        }
+        tempDir = mkdtempSync(tmpdir() + '/vscode-test-');
+    });
 
-        console.log(`Activating extension...`);
-        const publicApi = await extension.activate();
+    after(async () => {
+        await vscode.workspace.fs.delete(vscode.Uri.file(tempDir), {
+            recursive: true,
+        });
+    });
 
-        assert.strictEqual(publicApi, undefined);
+    /** need to save code to trigger full syntax check */
+    async function writeTestFile(content: string) {
+        const randomSuffix = Math.random().toString(36).substring(5);
+        const testFileUri = vscode.Uri.file(
+            tempDir + `/test${randomSuffix}.java`
+        );
+
+        await vscode.workspace.fs.writeFile(testFileUri, Buffer.from(content));
+        return testFileUri;
+    }
+
+    async function waitForDiagnostics(testFileUri: vscode.Uri) {
+        await new Promise<void>((resolve) => {
+            const disposable = vscode.languages.onDidChangeDiagnostics((e) => {
+                if (
+                    e.uris.some(
+                        (uri) => uri.toString() === testFileUri.toString()
+                    )
+                ) {
+                    const diagnostics =
+                        vscode.languages.getDiagnostics(testFileUri);
+                    if (diagnostics.length > 0) {
+                        disposable.dispose();
+                        resolve();
+                    }
+                }
+            });
+
+            // Set a timeout as a fallback
+            setTimeout(() => {
+                disposable.dispose();
+                resolve();
+            }, 10000);
+        });
+
+        // Now wait a bit to ensure extension has processed the diagnostics
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    test('inserts missing semicolon in java code', async () => {
+        const codeWithMissingSemicolon = javaCode.replace(';', '');
+
+        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
+
+        await vscode.window.showTextDocument(
+            await vscode.workspace.openTextDocument(testFileUri)
+        );
+        await waitForDiagnostics(testFileUri);
+
+        const actualCode = vscode.window.activeTextEditor?.document.getText();
+        assert.strictEqual(actualCode, javaCode);
+    });
+
+    test('does not insert missing semicolon if other syntax errors exist', async () => {
+        const codeWithSyntaxError = javaCode
+            .replace(';', '')
+            .replace('public class', 'pb class');
+        const testFileUri = await writeTestFile(codeWithSyntaxError);
+
+        await vscode.window.showTextDocument(
+            await vscode.workspace.openTextDocument(testFileUri)
+        );
+        await waitForDiagnostics(testFileUri);
+
+        const actualCode = vscode.window.activeTextEditor?.document.getText();
+        assert.strictEqual(actualCode, codeWithSyntaxError);
     });
 });

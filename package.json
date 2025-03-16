@@ -1,34 +1,33 @@
 {
-  "name": "lgtm",
-  "displayName": "LGTM - AI Code Review",
-  "description": "Review source code changes in Git using GitHub Copilot Chat",
+  "name": "fix-missing-semicolons",
+  "displayName": "Fix Missing Semicolons",
+  "description": "Automatically fix syntax errors for missing semicolons in Java",
   "publisher": "cpulvermacher",
-  "version": "0.13.5",
+  "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cpulvermacher/lgtm.git"
+    "url": "https://github.com/cpulvermacher/fix-missing-semicolons.git"
   },
   "engines": {
     "vscode": "^1.96.0"
   },
   "categories": [
-    "AI",
-    "Chat",
-    "Machine Learning",
-    "Programming Languages"
+    "Programming Languages",
+    "Formatters"
   ],
   "keywords": [
-    "ai",
-    "chat",
-    "copilot",
-    "git",
-    "review"
+    "java",
+    "syntax",
+    "semicolon",
+    ";"
   ],
   "icon": "images/icon.png",
   "license": "SEE LICENSE IN LICENSE",
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:java"
+  ],
   "main": "./out/extension.js",
-  "contributes": { },
+  "contributes": {},
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "check-exclusive": "ps aux | grep -v grep | grep -q 'esbuild.*--watch' && echo 'esbuild --watch running, aborting!' && exit 1 || exit 0",
