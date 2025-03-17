@@ -7,7 +7,7 @@ const supportedDiagnosticSources = ['Java'];
 export function activate(context: vscode.ExtensionContext) {
     // Listen for changes in diagnostics
     context.subscriptions.push(
-        vscode.languages.onDidChangeDiagnostics((event) => {
+        vscode.languages.onDidChangeDiagnostics(async (event) => {
             const activeEditor = vscode.window.activeTextEditor;
             const languageId = activeEditor?.document.languageId || '';
             if (!activeEditor || !supportedLanguageIds.includes(languageId)) {
@@ -38,7 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (allMissingSemicolonErrors && errors.length > 0) {
                 for (const diagnostic of errors) {
-                    applyFix(activeDocUri, diagnostic);
+                    await applyFix(activeDocUri, diagnostic);
                 }
             }
         })
@@ -62,7 +62,22 @@ function applyFix(
     activeDocUri: vscode.Uri,
     diagnostic: vscode.Diagnostic
 ): Thenable<boolean> {
+    const insertPosition = diagnostic.range.end;
     const edit = new vscode.WorkspaceEdit();
-    edit.insert(activeDocUri, diagnostic.range.end, ';');
+    const document = vscode.workspace.textDocuments.find(
+        (doc) => doc.uri.toString() === activeDocUri.toString()
+    );
+    if (document) {
+        // check one character before and after the insert position to avoid inserting semicolon twice
+        const textAtPosition = document.getText(
+            new vscode.Range(
+                insertPosition.translate(0, -1),
+                insertPosition.translate(0, 1)
+            )
+        );
+        if (!textAtPosition.includes(';')) {
+            edit.insert(activeDocUri, insertPosition, ';');
+        }
+    }
     return vscode.workspace.applyEdit(edit);
 }
