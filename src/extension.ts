@@ -39,7 +39,10 @@ export function activate(context: vscode.ExtensionContext) {
             if (allMissingSemicolonErrors && errors.length > 0) {
                 for (const diagnostic of errors) {
                     const insertPosition = diagnostic.range.end;
-                    if (hasSemicolon(activeEditor.document, insertPosition)) {
+                    if (
+                        hasSemicolon(activeEditor.document, insertPosition) ||
+                        isNearCursor(activeEditor, insertPosition)
+                    ) {
                         continue;
                     }
 
@@ -62,7 +65,6 @@ function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
     return missingSemicolonJava;
 }
 
-//TODO avoid messing with the user entering ; themselves
 function applyFix(
     activeDocUri: vscode.Uri,
     insertPosition: vscode.Position
@@ -73,16 +75,25 @@ function applyFix(
 }
 
 function hasSemicolon(
-    document: vscode.TextDocument | undefined,
+    document: vscode.TextDocument,
     position: vscode.Position
 ) {
-    if (!document) {
-        return false;
-    }
-
     // check one character before and after the insert position to avoid inserting semicolon twice
     const textAtPosition = document.getText(
         new vscode.Range(position.translate(0, -1), position.translate(0, 1))
     );
     return textAtPosition.includes(';');
+}
+
+/** returns true if cursor is in current or next line.
+ * This helps avoid close statements
+ * like
+ * ```
+ * someList
+ *   .stream()
+ * ```
+ */
+function isNearCursor(editor: vscode.TextEditor, position: vscode.Position) {
+    const cursorLine = editor.selection.active.line;
+    return cursorLine === position.line || cursorLine === position.line + 1;
 }

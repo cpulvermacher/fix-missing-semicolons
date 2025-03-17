@@ -107,4 +107,25 @@ suite('Extension ', () => {
         const actualCode = vscode.window.activeTextEditor?.document.getText();
         assert.strictEqual(actualCode, codeWithSyntaxError);
     });
+
+    test('does not insert missing semicolon if cursor in same line', async () => {
+        const codeWithMissingSemicolon = javaCode.replace(';', '');
+        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
+
+        await vscode.window.showTextDocument(
+            await vscode.workspace.openTextDocument(testFileUri)
+        );
+
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            throw new Error('No active editor');
+        }
+        const cursorPosition = new vscode.Position(2, 0);
+        editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
+
+        await waitForDiagnostics(testFileUri);
+
+        const actualCode = editor.document.getText();
+        assert.strictEqual(actualCode, codeWithMissingSemicolon);
+    });
 });
