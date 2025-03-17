@@ -1,5 +1,10 @@
 # Fix Missing Semicolons
 
+[![Latest Release](https://flat.badgen.net/github/release/cpulvermacher/fix-missing-semicolons)](https://github.com/cpulvermacher/fix-missing-semicolons/releases)
+![Installs](https://vsmarketplacebadges.dev/installs-short/cpulvermacher.fix-missing-semicolons.svg)
+[![Status](https://flat.badgen.net/github/checks/cpulvermacher/fix-missing-semicolons)](https://github.com/cpulvermacher/fix-missing-semicolons/actions/workflows/node.js.yml)
+[![License](https://flat.badgen.net/github/license/cpulvermacher/fix-missing-semicolons)](./LICENSE)
+
 Fix syntax errors for missing semicolons in Java without user interaction.
 - Automatically inserts semicolons in the correct position if `Syntax error, insert ";"` errors are found in the active editor.
 - Does not insert semicolons if there are any other language errors in the file.
