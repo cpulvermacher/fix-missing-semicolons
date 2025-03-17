@@ -38,7 +38,12 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (allMissingSemicolonErrors && errors.length > 0) {
                 for (const diagnostic of errors) {
-                    await applyFix(activeDocUri, diagnostic);
+                    const insertPosition = diagnostic.range.end;
+                    if (hasSemicolon(activeEditor.document, insertPosition)) {
+                        continue;
+                    }
+
+                    await applyFix(activeDocUri, insertPosition);
                 }
             }
         })
@@ -60,24 +65,24 @@ function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
 //TODO avoid messing with the user entering ; themselves
 function applyFix(
     activeDocUri: vscode.Uri,
-    diagnostic: vscode.Diagnostic
+    insertPosition: vscode.Position
 ): Thenable<boolean> {
-    const insertPosition = diagnostic.range.end;
     const edit = new vscode.WorkspaceEdit();
-    const document = vscode.workspace.textDocuments.find(
-        (doc) => doc.uri.toString() === activeDocUri.toString()
-    );
-    if (document) {
-        // check one character before and after the insert position to avoid inserting semicolon twice
-        const textAtPosition = document.getText(
-            new vscode.Range(
-                insertPosition.translate(0, -1),
-                insertPosition.translate(0, 1)
-            )
-        );
-        if (!textAtPosition.includes(';')) {
-            edit.insert(activeDocUri, insertPosition, ';');
-        }
-    }
+    edit.insert(activeDocUri, insertPosition, ';');
     return vscode.workspace.applyEdit(edit);
+}
+
+function hasSemicolon(
+    document: vscode.TextDocument | undefined,
+    position: vscode.Position
+) {
+    if (!document) {
+        return false;
+    }
+
+    // check one character before and after the insert position to avoid inserting semicolon twice
+    const textAtPosition = document.getText(
+        new vscode.Range(position.translate(0, -1), position.translate(0, 1))
+    );
+    return textAtPosition.includes(';');
 }
