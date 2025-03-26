@@ -107,6 +107,7 @@ suite('Extension ', () => {
             await vscode.workspace.openTextDocument(testFileUri)
         );
 
+        await waitForDiagnostics(testFileUri);
         await vscode.commands.executeCommand('workbench.action.files.save');
 
         const actualCode = vscode.window.activeTextEditor?.document.getText();
