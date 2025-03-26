@@ -10,7 +10,7 @@ Fix syntax errors for missing semicolons in Java automatically.
 ## Features
 
 ### Fix on Save
-- Fixes any missing semicolon errors detected in the file when saving.
+- Fixes any `Syntax error, insert ";"` errors found when saving the current document.
 - Does not insert semicolons if there are any other language errors in the file.
 
 
