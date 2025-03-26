@@ -26,7 +26,23 @@
     "onLanguage:java"
   ],
   "main": "./out/extension.js",
-  "contributes": {},
+  "contributes": {
+    "configuration": {
+      "title": "Fix Missing Semicolons",
+      "properties": {
+        "fix-missing-semicolons.fixOnError": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically fix errors when detected. (Experimental. Compared to 'Fix on Save', can produce unexpected results.)"
+        },
+        "fix-missing-semicolons.fixOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically fix errors when the file is saved."
+        }
+      }
+    }
+  },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "check-exclusive": "ps aux | grep -v grep | grep -q 'esbuild.*--watch' && echo 'esbuild --watch running, aborting!' && exit 1 || exit 0",

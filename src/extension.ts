@@ -3,57 +3,91 @@ import * as vscode from 'vscode';
 const supportedLanguageIds = ['java'];
 const supportedDiagnosticSources = ['Java'];
 
-// called when the extension is activated
+let diagnosticListener: vscode.Disposable | undefined;
+let saveListener: vscode.Disposable | undefined;
+
 export function activate(context: vscode.ExtensionContext) {
-    // Listen for changes in diagnostics
+    const { fixOnError, fixOnSave } = getConfig();
+
+    if (fixOnError) {
+        diagnosticListener = vscode.languages.onDidChangeDiagnostics(
+            handleDiagnosticUpdates
+        );
+        context.subscriptions.push(diagnosticListener);
+    }
+    if (fixOnSave) {
+        saveListener =
+            vscode.workspace.onWillSaveTextDocument(handleDocumentSave);
+        context.subscriptions.push(saveListener);
+    }
+
     context.subscriptions.push(
-        vscode.languages.onDidChangeDiagnostics(async (event) => {
-            const activeEditor = vscode.window.activeTextEditor;
-            const languageId = activeEditor?.document.languageId || '';
-            if (!activeEditor || !supportedLanguageIds.includes(languageId)) {
-                return;
-            }
-
-            // Check if any of the changed URIs match the active editor
-            const activeDocUri = activeEditor.document.uri;
-            if (
-                !event.uris.some(
-                    (uri) => uri.toString() === activeDocUri.toString()
-                )
-            ) {
-                return;
-            }
-
-            const diagnostics = vscode.languages.getDiagnostics(activeDocUri);
-
-            const errors = diagnostics.filter(
-                (d) =>
-                    d.severity === vscode.DiagnosticSeverity.Error &&
-                    d.source &&
-                    supportedDiagnosticSources.includes(d.source)
-            );
-            const allMissingSemicolonErrors = errors.every(
-                isMissingSemicolonError
-            );
-
-            if (allMissingSemicolonErrors && errors.length > 0) {
-                for (const diagnostic of errors) {
-                    const insertPosition = diagnostic.range.end;
-                    if (
-                        hasSemicolon(activeEditor.document, insertPosition) ||
-                        isNearCursor(activeEditor, insertPosition)
-                    ) {
-                        continue;
-                    }
-
-                    await applyFix(activeDocUri, insertPosition);
-                }
-            }
-        })
+        vscode.workspace.onDidChangeConfiguration(handleConfigChange)
     );
 }
+
 export function deactivate() {
     // No additional cleanup needed as subscriptions are managed by the extension context
+}
+
+function getConfig() {
+    const config = vscode.workspace.getConfiguration('fix-missing-semicolons');
+    const fixOnError = config.get<boolean>('fixOnError') ?? false;
+    const fixOnSave = config.get<boolean>('fixOnSave') ?? true;
+    return { fixOnError, fixOnSave };
+}
+
+function handleConfigChange(e: vscode.ConfigurationChangeEvent) {
+    if (!e.affectsConfiguration('fix-missing-semicolons')) {
+        return;
+    }
+
+    const { fixOnError, fixOnSave } = getConfig();
+    if (fixOnError && !diagnosticListener) {
+        diagnosticListener = vscode.languages.onDidChangeDiagnostics(
+            handleDiagnosticUpdates
+        );
+    } else if (!fixOnError && diagnosticListener) {
+        diagnosticListener.dispose();
+        diagnosticListener = undefined;
+    }
+
+    if (fixOnSave && !saveListener) {
+        saveListener =
+            vscode.workspace.onWillSaveTextDocument(handleDocumentSave);
+    } else if (!fixOnSave && saveListener) {
+        saveListener.dispose();
+        saveListener = undefined;
+    }
+}
+
+async function handleDiagnosticUpdates(
+    event: vscode.DiagnosticChangeEvent
+): Promise<void> {
+    const activeEditor = vscode.window.activeTextEditor;
+    const languageId = activeEditor?.document.languageId || '';
+    if (!activeEditor || !supportedLanguageIds.includes(languageId)) {
+        return;
+    }
+
+    // Check if any of the changed URIs match the active editor
+    const activeDocUri = activeEditor.document.uri;
+    if (!event.uris.some((uri) => uri.toString() === activeDocUri.toString())) {
+        return;
+    }
+
+    await checkAndFixDocument(activeEditor, true);
+}
+
+async function handleDocumentSave(e: vscode.TextDocumentWillSaveEvent) {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (
+        !activeEditor ||
+        !supportedLanguageIds.includes(e.document.languageId)
+    ) {
+        return;
+    }
+    await checkAndFixDocument(activeEditor, false);
 }
 
 function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
@@ -63,6 +97,36 @@ function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
         diagnostic.message.startsWith(`Syntax error, insert ";" to complete `);
 
     return missingSemicolonJava;
+}
+
+async function checkAndFixDocument(
+    editor: vscode.TextEditor,
+    avoidCursor: boolean
+) {
+    const activeDocUri = editor.document.uri;
+    const diagnostics = vscode.languages.getDiagnostics(activeDocUri);
+
+    const errors = diagnostics.filter(
+        (d) =>
+            d.severity === vscode.DiagnosticSeverity.Error &&
+            d.source &&
+            supportedDiagnosticSources.includes(d.source)
+    );
+    const allMissingSemicolonErrors = errors.every(isMissingSemicolonError);
+
+    if (allMissingSemicolonErrors && errors.length > 0) {
+        for (const diagnostic of errors) {
+            const insertPosition = diagnostic.range.end;
+            if (
+                hasSemicolon(editor.document, insertPosition) ||
+                (avoidCursor && isNearCursor(editor, insertPosition))
+            ) {
+                continue;
+            }
+
+            await applyFix(activeDocUri, insertPosition);
+        }
+    }
 }
 
 function applyFix(
