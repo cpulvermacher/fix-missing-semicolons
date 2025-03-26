@@ -83,7 +83,7 @@ suite('Extension ', () => {
     }
 
     test('fixOnError: inserts missing semicolon in java code', async () => {
-        await setConfig({ fixOnError: true });
+        await setConfig({ fixOnError: true, fixOnSave: false });
 
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
@@ -98,7 +98,7 @@ suite('Extension ', () => {
     });
 
     test('fixOnSave: inserts missing semicolon in java code', async () => {
-        await setConfig({ fixOnSave: true });
+        await setConfig({ fixOnSave: true, fixOnError: false });
 
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
@@ -131,6 +131,7 @@ suite('Extension ', () => {
     });
 
     test('does not insert missing semicolon if other syntax errors exist', async () => {
+        await setConfig({ fixOnError: true, fixOnSave: true });
         const codeWithSyntaxError = javaCode
             .replace(';', '')
             .replace('public class', 'pb class');
@@ -146,6 +147,7 @@ suite('Extension ', () => {
     });
 
     test('does not insert missing semicolon if cursor in same line', async () => {
+        await setConfig({ fixOnError: true, fixOnSave: true });
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
