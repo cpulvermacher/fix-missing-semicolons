@@ -64,7 +64,10 @@ suite('Extension ', () => {
                     const diagnostics =
                         vscode.languages.getDiagnostics(testFileUri);
                     if (diagnostics.length > 0) {
-                        console.log(`Found ${diagnostics.length} diagnostics`);
+                        console.log(
+                            `Found ${diagnostics.length} diagnostics`,
+                            diagnostics
+                        );
                         disposable.dispose();
                         resolve();
                     }
