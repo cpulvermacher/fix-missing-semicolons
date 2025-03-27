@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { mkdtempSync } from 'fs';
-import { after, before, suite, test } from 'mocha';
+import { afterEach, before, beforeEach, suite, test } from 'mocha';
 import { tmpdir } from 'os';
 import * as vscode from 'vscode';
 
@@ -28,14 +28,16 @@ suite('Extension ', () => {
             'redhat.java'
         );
         console.log(`redhat.java installed successfully.`);
+    });
 
+    beforeEach(async () => {
         tempDir = mkdtempSync(tmpdir() + '/vscode-test-');
 
         //set default config values
         await setConfig({ fixOnError: false, fixOnSave: true });
     });
 
-    after(async () => {
+    afterEach(async () => {
         await vscode.workspace.fs.delete(vscode.Uri.file(tempDir), {
             recursive: true,
         });
