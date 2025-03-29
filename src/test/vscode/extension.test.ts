@@ -52,10 +52,7 @@ suite('Extension ', () => {
 
     /** need to save code to trigger full syntax check */
     async function writeTestFile(content: string) {
-        const randomSuffix = Math.random().toString(36).substring(5);
-        const testFileUri = vscode.Uri.file(
-            tempDir + `/test${randomSuffix}.java`
-        );
+        const testFileUri = vscode.Uri.file(tempDir + `/Main.java`);
         console.log(`Writing test file to ${testFileUri.fsPath}...`);
 
         await vscode.workspace.fs.writeFile(testFileUri, Buffer.from(content));
