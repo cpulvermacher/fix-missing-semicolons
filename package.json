@@ -45,7 +45,8 @@
     "commands": [
       {
         "command": "fix-missing-semicolons.fix",
-        "title": "Fix"
+        "title": "Fix",
+        "category": "Fix Missing Semicolons"
       }
     ]
   },
