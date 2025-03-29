@@ -89,9 +89,6 @@ suite('Extension ', () => {
                 reject(new Error('Timed out waiting for diagnostics'));
             }, 18000);
         });
-
-        // Now wait a bit to ensure extension has processed the diagnostics
-        await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     test('inserts missing semicolon on command', async () => {
@@ -107,8 +104,11 @@ suite('Extension ', () => {
 
         await vscode.commands.executeCommand('fix-missing-semicolons.fix');
 
-        const actualCode = vscode.window.activeTextEditor?.document.getText();
-        assert.strictEqual(actualCode, javaCode);
+        await waitFor(() => {
+            const actualCode =
+                vscode.window.activeTextEditor?.document.getText();
+            assert.strictEqual(actualCode, javaCode);
+        });
     });
 
     test('fixOnSave: inserts missing semicolon in java code', async () => {
@@ -124,8 +124,11 @@ suite('Extension ', () => {
         await waitForDiagnostics(testFileUri);
         await vscode.commands.executeCommand('workbench.action.files.save');
 
-        const actualCode = vscode.window.activeTextEditor?.document.getText();
-        assert.strictEqual(actualCode, javaCode);
+        await waitFor(() => {
+            const actualCode =
+                vscode.window.activeTextEditor?.document.getText();
+            assert.strictEqual(actualCode, javaCode);
+        });
     });
 
     test('fixOnError: inserts missing semicolon in java code', async () => {
@@ -139,8 +142,11 @@ suite('Extension ', () => {
         );
         await waitForDiagnostics(testFileUri);
 
-        const actualCode = vscode.window.activeTextEditor?.document.getText();
-        assert.strictEqual(actualCode, javaCode);
+        await waitFor(() => {
+            const actualCode =
+                vscode.window.activeTextEditor?.document.getText();
+            assert.strictEqual(actualCode, javaCode);
+        });
     });
 
     test('does not insert missing semicolon if both fixOnError & fixOnSave are disabled', async () => {
@@ -154,6 +160,8 @@ suite('Extension ', () => {
         );
         await waitForDiagnostics(testFileUri);
         await vscode.commands.executeCommand('workbench.action.files.save');
+
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
 
         const actualCode = vscode.window.activeTextEditor?.document.getText();
         assert.strictEqual(actualCode, codeWithMissingSemicolon);
@@ -170,6 +178,8 @@ suite('Extension ', () => {
             await vscode.workspace.openTextDocument(testFileUri)
         );
         await waitForDiagnostics(testFileUri);
+
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
 
         const actualCode = vscode.window.activeTextEditor?.document.getText();
         assert.strictEqual(actualCode, codeWithSyntaxError);
@@ -193,6 +203,8 @@ suite('Extension ', () => {
 
         await waitForDiagnostics(testFileUri);
 
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
+
         const actualCode = editor.document.getText();
         assert.strictEqual(actualCode, codeWithMissingSemicolon);
     });
@@ -211,4 +223,40 @@ async function setConfig(settings: {
     for (const [key, value] of Object.entries(settings)) {
         await config.update(key, value, vscode.ConfigurationTarget.Global);
     }
+}
+
+async function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(
+    condition: () => void,
+    timeoutMs: number = 5_000,
+    intervalMs: number = 100
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+
+        const checkCondition = () => {
+            const elapsedMs = Date.now() - startTime;
+            try {
+                condition();
+                console.log(`waitFor succeeded after ${elapsedMs}ms`);
+                resolve();
+            } catch (e) {
+                if (elapsedMs > timeoutMs) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    reject(
+                        new Error(
+                            `waitFor timed out after ${timeoutMs}ms: ${msg}`
+                        )
+                    );
+                } else {
+                    setTimeout(checkCondition, intervalMs);
+                }
+            }
+        };
+
+        checkCondition();
+    });
 }
