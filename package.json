@@ -41,7 +41,13 @@
           "description": "Automatically fix errors when detected. (Experimental. Compared to 'Fix on Save', can produce unexpected results.)"
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "fix-missing-semicolons.fix",
+        "title": "Fix"
+      }
+    ]
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",

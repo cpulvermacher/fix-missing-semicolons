@@ -7,6 +7,13 @@ let diagnosticListener: vscode.Disposable | undefined;
 let saveListener: vscode.Disposable | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+        vscode.commands.registerCommand(
+            'fix-missing-semicolons.fix',
+            handleFixCommand
+        )
+    );
+
     const { fixOnError, fixOnSave } = getConfig();
 
     if (fixOnError) {
@@ -17,7 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
     if (fixOnSave) {
         saveListener =
-            vscode.workspace.onWillSaveTextDocument(handleDocumentSave);
+            vscode.workspace.onWillSaveTextDocument(handleFixCommand);
         context.subscriptions.push(saveListener);
     }
 
@@ -54,7 +61,7 @@ function handleConfigChange(e: vscode.ConfigurationChangeEvent) {
 
     if (fixOnSave && !saveListener) {
         saveListener =
-            vscode.workspace.onWillSaveTextDocument(handleDocumentSave);
+            vscode.workspace.onWillSaveTextDocument(handleFixCommand);
     } else if (!fixOnSave && saveListener) {
         saveListener.dispose();
         saveListener = undefined;
@@ -87,20 +94,11 @@ async function handleDiagnosticUpdates(
     await checkAndFixDocument(activeEditor, true);
 }
 
-async function handleDocumentSave() {
+async function handleFixCommand() {
     const activeEditor = getTargetEditor();
     if (activeEditor) {
         await checkAndFixDocument(activeEditor, false);
     }
-}
-
-function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
-    const missingSemicolonJava =
-        diagnostic.severity === vscode.DiagnosticSeverity.Error &&
-        diagnostic.source === 'Java' &&
-        diagnostic.message.startsWith(`Syntax error, insert ";" to complete `);
-
-    return missingSemicolonJava;
 }
 
 async function checkAndFixDocument(
@@ -131,6 +129,15 @@ async function checkAndFixDocument(
             await applyFix(activeDocUri, insertPosition);
         }
     }
+}
+
+function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
+    const missingSemicolonJava =
+        diagnostic.severity === vscode.DiagnosticSeverity.Error &&
+        diagnostic.source === 'Java' &&
+        diagnostic.message.startsWith(`Syntax error, insert ";" to complete `);
+
+    return missingSemicolonJava;
 }
 
 function applyFix(
