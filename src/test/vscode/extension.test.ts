@@ -211,10 +211,6 @@ async function setConfig(settings: {
     fixOnError: boolean;
     fixOnSave: boolean;
 }) {
-    console.log('changing config', {
-        fixOnError: settings.fixOnError,
-        fixOnSave: settings.fixOnSave,
-    });
     const config = vscode.workspace.getConfiguration('fix-missing-semicolons');
 
     for (const [key, value] of Object.entries(settings)) {
@@ -238,7 +234,9 @@ async function waitFor(
             const elapsedMs = Date.now() - startTime;
             try {
                 condition();
-                console.log(`waitFor succeeded after ${elapsedMs}ms`);
+                if (elapsedMs > intervalMs) {
+                    console.log(`waitFor succeeded after ${elapsedMs}ms`);
+                }
                 resolve();
             } catch (e) {
                 if (elapsedMs > timeoutMs) {
