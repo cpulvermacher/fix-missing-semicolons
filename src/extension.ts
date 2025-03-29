@@ -97,6 +97,7 @@ async function handleDiagnosticUpdates(
 }
 
 async function handleFixCommand() {
+    console.log('******* handleFixCommand  ********');
     const activeEditor = getTargetEditor();
     if (activeEditor) {
         await checkAndFixDocument(activeEditor, false);
