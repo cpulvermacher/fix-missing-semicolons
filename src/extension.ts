@@ -61,15 +61,23 @@ function handleConfigChange(e: vscode.ConfigurationChangeEvent) {
     }
 }
 
-async function handleDiagnosticUpdates(
-    event: vscode.DiagnosticChangeEvent
-): Promise<void> {
+/** returns active editor if it contains a target language */
+function getTargetEditor() {
     const activeEditor = vscode.window.activeTextEditor;
     const languageId = activeEditor?.document.languageId || '';
     if (!activeEditor || !supportedLanguageIds.includes(languageId)) {
+        return null;
+    }
+    return activeEditor;
+}
+
+async function handleDiagnosticUpdates(
+    event: vscode.DiagnosticChangeEvent
+): Promise<void> {
+    const activeEditor = getTargetEditor();
+    if (!activeEditor) {
         return;
     }
-
     // Check if any of the changed URIs match the active editor
     const activeDocUri = activeEditor.document.uri;
     if (!event.uris.some((uri) => uri.toString() === activeDocUri.toString())) {
@@ -79,15 +87,11 @@ async function handleDiagnosticUpdates(
     await checkAndFixDocument(activeEditor, true);
 }
 
-async function handleDocumentSave(e: vscode.TextDocumentWillSaveEvent) {
-    const activeEditor = vscode.window.activeTextEditor;
-    if (
-        !activeEditor ||
-        !supportedLanguageIds.includes(e.document.languageId)
-    ) {
-        return;
+async function handleDocumentSave() {
+    const activeEditor = getTargetEditor();
+    if (activeEditor) {
+        await checkAndFixDocument(activeEditor, false);
     }
-    await checkAndFixDocument(activeEditor, false);
 }
 
 function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
