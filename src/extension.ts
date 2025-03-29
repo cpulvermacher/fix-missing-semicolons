@@ -7,6 +7,7 @@ let diagnosticListener: vscode.Disposable | undefined;
 let saveListener: vscode.Disposable | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
+    console.log('******* activating  ********');
     context.subscriptions.push(
         vscode.commands.registerCommand(
             'fix-missing-semicolons.fix',
@@ -50,6 +51,7 @@ function handleConfigChange(e: vscode.ConfigurationChangeEvent) {
     }
 
     const { fixOnError, fixOnSave } = getConfig();
+    console.log(`========= config changed: `, { fixOnError, fixOnSave });
     if (fixOnError && !diagnosticListener) {
         diagnosticListener = vscode.languages.onDidChangeDiagnostics(
             handleDiagnosticUpdates

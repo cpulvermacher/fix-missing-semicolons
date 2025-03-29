@@ -198,7 +198,14 @@ suite('Extension ', () => {
     });
 });
 
-async function setConfig(settings: object) {
+async function setConfig(settings: {
+    fixOnError: boolean;
+    fixOnSave: boolean;
+}) {
+    console.log('changing config', {
+        fixOnError: settings.fixOnError,
+        fixOnSave: settings.fixOnSave,
+    });
     const config = vscode.workspace.getConfiguration('fix-missing-semicolons');
 
     for (const [key, value] of Object.entries(settings)) {
