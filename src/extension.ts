@@ -15,27 +15,25 @@ export function activate(context: vscode.ExtensionContext) {
         )
     );
 
-    const { fixOnError, fixOnSave } = getConfig();
-
-    if (fixOnError) {
-        diagnosticListener = vscode.languages.onDidChangeDiagnostics(
-            handleDiagnosticUpdates
-        );
-        context.subscriptions.push(diagnosticListener);
-    }
-    if (fixOnSave) {
-        saveListener =
-            vscode.workspace.onWillSaveTextDocument(handleFixCommand);
-        context.subscriptions.push(saveListener);
-    }
+    updateConfig();
 
     context.subscriptions.push(
-        vscode.workspace.onDidChangeConfiguration(handleConfigChange)
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration('fix-missing-semicolons')) {
+                updateConfig();
+            }
+        })
     );
 }
 
 export function deactivate() {
-    // No additional cleanup needed as subscriptions are managed by the extension context
+    // listeners are not added to context.subscriptions
+    if (diagnosticListener) {
+        diagnosticListener.dispose();
+    }
+    if (saveListener) {
+        saveListener.dispose();
+    }
 }
 
 function getConfig() {
@@ -45,11 +43,7 @@ function getConfig() {
     return { fixOnError, fixOnSave };
 }
 
-function handleConfigChange(e: vscode.ConfigurationChangeEvent) {
-    if (!e.affectsConfiguration('fix-missing-semicolons')) {
-        return;
-    }
-
+function updateConfig() {
     const { fixOnError, fixOnSave } = getConfig();
     console.log(`========= config changed: `, { fixOnError, fixOnSave });
     if (fixOnError && !diagnosticListener) {
