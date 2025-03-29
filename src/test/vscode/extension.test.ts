@@ -112,6 +112,7 @@ suite('Extension ', () => {
     });
 
     test('fixOnSave: inserts missing semicolon in java code', async () => {
+        console.log('>>>>>>>>>>>> test fixOnSave');
         await setConfig({ fixOnSave: true, fixOnError: false });
 
         const codeWithMissingSemicolon = javaCode.replace(';', '');
@@ -124,6 +125,7 @@ suite('Extension ', () => {
         await waitForDiagnostics(testFileUri);
         await vscode.commands.executeCommand('workbench.action.files.save');
 
+        console.log('<<<<<<<<<<<< waiting for save to finish....');
         await waitFor(() => {
             const actualCode =
                 vscode.window.activeTextEditor?.document.getText();
