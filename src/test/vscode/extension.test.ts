@@ -38,6 +38,13 @@ suite('Extension ', () => {
     });
 
     afterEach(async () => {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            await vscode.commands.executeCommand(
+                'workbench.action.closeActiveEditor'
+            );
+        }
+
         await vscode.workspace.fs.delete(vscode.Uri.file(tempDir), {
             recursive: true,
         });
