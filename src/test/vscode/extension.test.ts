@@ -119,9 +119,9 @@ suite('Extension ', () => {
         );
 
         await waitForDiagnostics(testFileUri);
-        await vscode.commands.executeCommand('workbench.action.files.save');
 
         await waitFor(() => {
+            vscode.commands.executeCommand('workbench.action.files.save');
             const actualCode =
                 vscode.window.activeTextEditor?.document.getText();
             assert.strictEqual(actualCode, javaCode);
