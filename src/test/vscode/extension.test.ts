@@ -4,12 +4,6 @@ import { afterEach, before, beforeEach, suite, test } from 'mocha';
 import { tmpdir } from 'os';
 import * as vscode from 'vscode';
 
-const javaCode = `public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, world!");
-    }
-}`;
-
 suite('Extension ', () => {
     let tempDir: string;
 
@@ -52,7 +46,8 @@ suite('Extension ', () => {
 
     /** need to save code to trigger full syntax check */
     async function writeTestFile(content: string) {
-        const testFileUri = vscode.Uri.file(tempDir + `/Main.java`);
+        const className = content.match(/public class (\w+)/)?.[1] || 'Unknown';
+        const testFileUri = vscode.Uri.file(tempDir + `/${className}.java`);
         console.log(`Writing test file to ${testFileUri.fsPath}...`);
 
         await vscode.workspace.fs.writeFile(testFileUri, Buffer.from(content));
@@ -91,6 +86,7 @@ suite('Extension ', () => {
     test('inserts missing semicolon on command', async () => {
         await setConfig({ fixOnError: false, fixOnSave: false });
 
+        const javaCode = getJavaCode('CommandTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -111,6 +107,7 @@ suite('Extension ', () => {
     test('fixOnSave: inserts missing semicolon in java code', async () => {
         await setConfig({ fixOnSave: true, fixOnError: false });
 
+        const javaCode = getJavaCode('OnSaveTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -135,6 +132,7 @@ suite('Extension ', () => {
     test('fixOnError: inserts missing semicolon in java code', async () => {
         await setConfig({ fixOnError: true, fixOnSave: false });
 
+        const javaCode = getJavaCode('OnErrorTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -153,6 +151,7 @@ suite('Extension ', () => {
     test('does not insert missing semicolon if both fixOnError & fixOnSave are disabled', async () => {
         await setConfig({ fixOnError: false, fixOnSave: false });
 
+        const javaCode = getJavaCode('NoAutoFixTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -170,6 +169,7 @@ suite('Extension ', () => {
 
     test('does not insert missing semicolon if other syntax errors exist', async () => {
         await setConfig({ fixOnError: true, fixOnSave: true });
+        const javaCode = getJavaCode('OtherSyntaxErrorTest');
         const codeWithSyntaxError = javaCode
             .replace(';', '')
             .replace('public class', 'pb class');
@@ -188,6 +188,7 @@ suite('Extension ', () => {
 
     test('does not insert missing semicolon if cursor in same line', async () => {
         await setConfig({ fixOnError: true, fixOnSave: true });
+        const javaCode = getJavaCode('CursorInSameLineTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -258,4 +259,12 @@ async function waitFor(
 
         checkCondition();
     });
+}
+
+function getJavaCode(className: string) {
+    return `public class ${className} {
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+    }
+}`;
 }
