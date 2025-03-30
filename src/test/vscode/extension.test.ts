@@ -1,14 +1,8 @@
 import assert from 'assert';
 import { mkdtempSync } from 'fs';
-import { after, before, suite, test } from 'mocha';
+import { afterEach, before, beforeEach, suite, test } from 'mocha';
 import { tmpdir } from 'os';
 import * as vscode from 'vscode';
-
-const javaCode = `public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, world!");
-    }
-}`;
 
 suite('Extension ', () => {
     let tempDir: string;
@@ -28,14 +22,23 @@ suite('Extension ', () => {
             'redhat.java'
         );
         console.log(`redhat.java installed successfully.`);
+    });
 
+    beforeEach(async () => {
         tempDir = mkdtempSync(tmpdir() + '/vscode-test-');
 
         //set default config values
         await setConfig({ fixOnError: false, fixOnSave: true });
     });
 
-    after(async () => {
+    afterEach(async () => {
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            await vscode.commands.executeCommand(
+                'workbench.action.closeActiveEditor'
+            );
+        }
+
         await vscode.workspace.fs.delete(vscode.Uri.file(tempDir), {
             recursive: true,
         });
@@ -43,10 +46,8 @@ suite('Extension ', () => {
 
     /** need to save code to trigger full syntax check */
     async function writeTestFile(content: string) {
-        const randomSuffix = Math.random().toString(36).substring(5);
-        const testFileUri = vscode.Uri.file(
-            tempDir + `/test${randomSuffix}.java`
-        );
+        const className = content.match(/public class (\w+)/)?.[1] || 'Unknown';
+        const testFileUri = vscode.Uri.file(tempDir + `/${className}.java`);
         console.log(`Writing test file to ${testFileUri.fsPath}...`);
 
         await vscode.workspace.fs.writeFile(testFileUri, Buffer.from(content));
@@ -64,7 +65,10 @@ suite('Extension ', () => {
                     const diagnostics =
                         vscode.languages.getDiagnostics(testFileUri);
                     if (diagnostics.length > 0) {
-                        console.log(`Found ${diagnostics.length} diagnostics`);
+                        console.log(
+                            `Found ${diagnostics.length} diagnostics`,
+                            diagnostics
+                        );
                         disposable.dispose();
                         resolve();
                     }
@@ -77,14 +81,33 @@ suite('Extension ', () => {
                 reject(new Error('Timed out waiting for diagnostics'));
             }, 18000);
         });
-
-        // Now wait a bit to ensure extension has processed the diagnostics
-        await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+
+    test('inserts missing semicolon on command', async () => {
+        await setConfig({ fixOnError: false, fixOnSave: false });
+
+        const javaCode = getJavaCode('CommandTest');
+        const codeWithMissingSemicolon = javaCode.replace(';', '');
+        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
+
+        await vscode.window.showTextDocument(
+            await vscode.workspace.openTextDocument(testFileUri)
+        );
+        await waitForDiagnostics(testFileUri);
+
+        await vscode.commands.executeCommand('fix-missing-semicolons.fix');
+
+        await waitFor(() => {
+            const actualCode =
+                vscode.window.activeTextEditor?.document.getText();
+            assert.strictEqual(actualCode, javaCode);
+        });
+    });
 
     test('fixOnSave: inserts missing semicolon in java code', async () => {
         await setConfig({ fixOnSave: true, fixOnError: false });
 
+        const javaCode = getJavaCode('OnSaveTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -93,15 +116,23 @@ suite('Extension ', () => {
         );
 
         await waitForDiagnostics(testFileUri);
-        await vscode.commands.executeCommand('workbench.action.files.save');
 
-        const actualCode = vscode.window.activeTextEditor?.document.getText();
-        assert.strictEqual(actualCode, javaCode);
+        await waitFor(
+            () => {
+                vscode.commands.executeCommand('workbench.action.files.save');
+                const actualCode =
+                    vscode.window.activeTextEditor?.document.getText();
+                assert.strictEqual(actualCode, javaCode);
+            },
+            15_000,
+            500
+        );
     });
 
     test('fixOnError: inserts missing semicolon in java code', async () => {
         await setConfig({ fixOnError: true, fixOnSave: false });
 
+        const javaCode = getJavaCode('OnErrorTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -110,13 +141,17 @@ suite('Extension ', () => {
         );
         await waitForDiagnostics(testFileUri);
 
-        const actualCode = vscode.window.activeTextEditor?.document.getText();
-        assert.strictEqual(actualCode, javaCode);
+        await waitFor(() => {
+            const actualCode =
+                vscode.window.activeTextEditor?.document.getText();
+            assert.strictEqual(actualCode, javaCode);
+        });
     });
 
     test('does not insert missing semicolon if both fixOnError & fixOnSave are disabled', async () => {
         await setConfig({ fixOnError: false, fixOnSave: false });
 
+        const javaCode = getJavaCode('NoAutoFixTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -125,6 +160,8 @@ suite('Extension ', () => {
         );
         await waitForDiagnostics(testFileUri);
         await vscode.commands.executeCommand('workbench.action.files.save');
+
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
 
         const actualCode = vscode.window.activeTextEditor?.document.getText();
         assert.strictEqual(actualCode, codeWithMissingSemicolon);
@@ -132,6 +169,7 @@ suite('Extension ', () => {
 
     test('does not insert missing semicolon if other syntax errors exist', async () => {
         await setConfig({ fixOnError: true, fixOnSave: true });
+        const javaCode = getJavaCode('OtherSyntaxErrorTest');
         const codeWithSyntaxError = javaCode
             .replace(';', '')
             .replace('public class', 'pb class');
@@ -142,12 +180,15 @@ suite('Extension ', () => {
         );
         await waitForDiagnostics(testFileUri);
 
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
+
         const actualCode = vscode.window.activeTextEditor?.document.getText();
         assert.strictEqual(actualCode, codeWithSyntaxError);
     });
 
     test('does not insert missing semicolon if cursor in same line', async () => {
         await setConfig({ fixOnError: true, fixOnSave: true });
+        const javaCode = getJavaCode('CursorInSameLineTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
         const testFileUri = await writeTestFile(codeWithMissingSemicolon);
 
@@ -164,15 +205,66 @@ suite('Extension ', () => {
 
         await waitForDiagnostics(testFileUri);
 
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
+
         const actualCode = editor.document.getText();
         assert.strictEqual(actualCode, codeWithMissingSemicolon);
     });
 });
 
-async function setConfig(settings: object) {
+async function setConfig(settings: {
+    fixOnError: boolean;
+    fixOnSave: boolean;
+}) {
     const config = vscode.workspace.getConfiguration('fix-missing-semicolons');
 
     for (const [key, value] of Object.entries(settings)) {
         await config.update(key, value, vscode.ConfigurationTarget.Global);
     }
+}
+
+async function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitFor(
+    condition: () => void,
+    timeoutMs: number = 5_000,
+    intervalMs: number = 100
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+
+        const checkCondition = () => {
+            const elapsedMs = Date.now() - startTime;
+            try {
+                condition();
+                if (elapsedMs > intervalMs) {
+                    console.log(`waitFor succeeded after ${elapsedMs}ms`);
+                }
+                resolve();
+            } catch (e) {
+                if (elapsedMs > timeoutMs) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    reject(
+                        new Error(
+                            `waitFor timed out after ${timeoutMs}ms: ${msg}`
+                        )
+                    );
+                } else {
+                    setTimeout(checkCondition, intervalMs);
+                }
+            }
+        };
+
+        checkCondition();
+    });
+}
+
+function getJavaCode(className: string) {
+    return `public class ${className} {
+    public static void main(String[] args) {
+        System.out.println("Hello, world!");
+    }
+}`;
 }
