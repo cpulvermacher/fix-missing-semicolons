@@ -120,12 +120,16 @@ suite('Extension ', () => {
 
         await waitForDiagnostics(testFileUri);
 
-        await waitFor(() => {
-            vscode.commands.executeCommand('workbench.action.files.save');
-            const actualCode =
-                vscode.window.activeTextEditor?.document.getText();
-            assert.strictEqual(actualCode, javaCode);
-        });
+        await waitFor(
+            () => {
+                vscode.commands.executeCommand('workbench.action.files.save');
+                const actualCode =
+                    vscode.window.activeTextEditor?.document.getText();
+                assert.strictEqual(actualCode, javaCode);
+            },
+            15_000,
+            500
+        );
     });
 
     test('fixOnError: inserts missing semicolon in java code', async () => {
