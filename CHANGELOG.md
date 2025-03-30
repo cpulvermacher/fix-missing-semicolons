@@ -1,5 +1,8 @@
 # Change Log
 
+## [0.3.0] (pre-release)
+- Add Fix command for manually fixing issues
+
 ## [0.2.1]
 - Same as 0.2.0
 
