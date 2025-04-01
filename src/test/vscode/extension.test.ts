@@ -98,9 +98,10 @@ suite('Extension ', () => {
         await vscode.commands.executeCommand('fix-missing-semicolons.fix');
 
         await waitFor(() => {
-            const actualCode =
-                vscode.window.activeTextEditor?.document.getText();
-            assert.strictEqual(actualCode, javaCode);
+            assert.strictEqual(
+                vscode.window.activeTextEditor?.document.getText(),
+                javaCode
+            );
         });
     });
 
@@ -186,7 +187,7 @@ suite('Extension ', () => {
         assert.strictEqual(actualCode, codeWithSyntaxError);
     });
 
-    test('does not insert missing semicolon if cursor in same line', async () => {
+    test('fixOnError: does not insert missing semicolon if cursor in same line', async () => {
         await setConfig({ fixOnError: true, fixOnSave: true });
         const javaCode = getJavaCode('CursorInSameLineTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
@@ -209,6 +210,40 @@ suite('Extension ', () => {
 
         const actualCode = editor.document.getText();
         assert.strictEqual(actualCode, codeWithMissingSemicolon);
+    });
+
+    test('does not add semicolon if text fixed in the mean time', async () => {
+        await setConfig({ fixOnError: false, fixOnSave: false });
+
+        const javaCode = getJavaCode('AlreadyFixedTest').replace(
+            ';',
+            '; //test'
+        );
+        const codeWithMissingSemicolon = javaCode.replace(';', '');
+        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
+
+        await vscode.window.showTextDocument(
+            await vscode.workspace.openTextDocument(testFileUri)
+        );
+        await waitForDiagnostics(testFileUri);
+
+        // adjust code in mean time
+        const editor = vscode.window.activeTextEditor!;
+        const insertPosition = getPositionOf(' //test', editor.document);
+        const edit = new vscode.WorkspaceEdit();
+        edit.insert(editor.document.uri, insertPosition, ';');
+        await vscode.workspace.applyEdit(edit);
+
+        await vscode.commands.executeCommand('fix-missing-semicolons.fix');
+
+        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
+
+        await waitFor(() => {
+            assert.strictEqual(
+                vscode.window.activeTextEditor?.document.getText(),
+                javaCode
+            );
+        });
     });
 });
 
@@ -267,4 +302,20 @@ function getJavaCode(className: string) {
         System.out.println("Hello, world!");
     }
 }`;
+}
+
+/** find first occurrence of text in document */
+function getPositionOf(text: string, document: vscode.TextDocument) {
+    const index = document.getText().indexOf(text);
+    if (index === -1) {
+        throw new Error(`Text "${text}" not found in document`);
+    }
+    return document.positionAt(index);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function skip(title: string, fn: () => void | Promise<void>) {
+    void fn;
+
+    console.log(`Skipping test: ${title}`);
 }
