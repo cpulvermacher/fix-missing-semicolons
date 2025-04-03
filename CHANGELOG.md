@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.3.2] (pre-release)
+- On save, fix errors in the saved document, not the active editor
+- Remove buggy "Fix on Error" option
+
 ## [0.3.1]
 - Same as 0.3.0
 
