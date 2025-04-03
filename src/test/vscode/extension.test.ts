@@ -28,7 +28,7 @@ suite('Extension ', () => {
         tempDir = mkdtempSync(tmpdir() + '/vscode-test-');
 
         //set default config values
-        await setConfig({ fixOnError: false, fixOnSave: true });
+        await setConfig({ fixOnSave: true });
     });
 
     afterEach(async () => {
@@ -84,7 +84,7 @@ suite('Extension ', () => {
     }
 
     test('inserts missing semicolon on command', async () => {
-        await setConfig({ fixOnError: false, fixOnSave: false });
+        await setConfig({ fixOnSave: false });
 
         const javaCode = getJavaCode('CommandTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
@@ -106,7 +106,7 @@ suite('Extension ', () => {
     });
 
     test('fixOnSave: inserts missing semicolon in java code', async () => {
-        await setConfig({ fixOnSave: true, fixOnError: false });
+        await setConfig({ fixOnSave: true });
 
         const javaCode = getJavaCode('OnSaveTest');
         const codeWithMissingSemicolon = javaCode.replace(';', '');
@@ -130,46 +130,8 @@ suite('Extension ', () => {
         );
     });
 
-    test('fixOnError: inserts missing semicolon in java code', async () => {
-        await setConfig({ fixOnError: true, fixOnSave: false });
-
-        const javaCode = getJavaCode('OnErrorTest');
-        const codeWithMissingSemicolon = javaCode.replace(';', '');
-        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
-
-        await vscode.window.showTextDocument(
-            await vscode.workspace.openTextDocument(testFileUri)
-        );
-        await waitForDiagnostics(testFileUri);
-
-        await waitFor(() => {
-            const actualCode =
-                vscode.window.activeTextEditor?.document.getText();
-            assert.strictEqual(actualCode, javaCode);
-        });
-    });
-
-    test('does not insert missing semicolon if both fixOnError & fixOnSave are disabled', async () => {
-        await setConfig({ fixOnError: false, fixOnSave: false });
-
-        const javaCode = getJavaCode('NoAutoFixTest');
-        const codeWithMissingSemicolon = javaCode.replace(';', '');
-        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
-
-        await vscode.window.showTextDocument(
-            await vscode.workspace.openTextDocument(testFileUri)
-        );
-        await waitForDiagnostics(testFileUri);
-        await vscode.commands.executeCommand('workbench.action.files.save');
-
-        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
-
-        const actualCode = vscode.window.activeTextEditor?.document.getText();
-        assert.strictEqual(actualCode, codeWithMissingSemicolon);
-    });
-
     test('does not insert missing semicolon if other syntax errors exist', async () => {
-        await setConfig({ fixOnError: true, fixOnSave: true });
+        await setConfig({ fixOnSave: true });
         const javaCode = getJavaCode('OtherSyntaxErrorTest');
         const codeWithSyntaxError = javaCode
             .replace(';', '')
@@ -187,33 +149,8 @@ suite('Extension ', () => {
         assert.strictEqual(actualCode, codeWithSyntaxError);
     });
 
-    test('fixOnError: does not insert missing semicolon if cursor in same line', async () => {
-        await setConfig({ fixOnError: true, fixOnSave: true });
-        const javaCode = getJavaCode('CursorInSameLineTest');
-        const codeWithMissingSemicolon = javaCode.replace(';', '');
-        const testFileUri = await writeTestFile(codeWithMissingSemicolon);
-
-        await vscode.window.showTextDocument(
-            await vscode.workspace.openTextDocument(testFileUri)
-        );
-
-        const editor = vscode.window.activeTextEditor;
-        if (!editor) {
-            throw new Error('No active editor');
-        }
-        const cursorPosition = new vscode.Position(2, 0);
-        editor.selection = new vscode.Selection(cursorPosition, cursorPosition);
-
-        await waitForDiagnostics(testFileUri);
-
-        await sleep(1000); // wait for extension to process diagnostics (so we can check it really doesn't apply any fix)
-
-        const actualCode = editor.document.getText();
-        assert.strictEqual(actualCode, codeWithMissingSemicolon);
-    });
-
     test('does not add semicolon if text fixed in the mean time', async () => {
-        await setConfig({ fixOnError: false, fixOnSave: false });
+        await setConfig({ fixOnSave: false });
 
         const javaCode = getJavaCode('AlreadyFixedTest').replace(
             ';',
@@ -247,10 +184,7 @@ suite('Extension ', () => {
     });
 });
 
-async function setConfig(settings: {
-    fixOnError: boolean;
-    fixOnSave: boolean;
-}) {
+async function setConfig(settings: { fixOnSave: boolean }) {
     const config = vscode.workspace.getConfiguration('fix-missing-semicolons');
 
     for (const [key, value] of Object.entries(settings)) {

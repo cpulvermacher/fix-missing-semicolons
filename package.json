@@ -34,11 +34,6 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically fix errors when the file is saved."
-        },
-        "fix-missing-semicolons.fixOnError": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically fix errors when detected. (Experimental. Compared to 'Fix on Save', can produce unexpected results.)"
         }
       }
     },

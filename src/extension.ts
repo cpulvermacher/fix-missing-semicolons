@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 const supportedLanguageIds = ['java'];
 const supportedDiagnosticSources = ['Java'];
 
-let diagnosticListener: vscode.Disposable | undefined;
 let saveListener: vscode.Disposable | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
@@ -27,9 +26,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
     // listeners are not added to context.subscriptions
-    if (diagnosticListener) {
-        diagnosticListener.dispose();
-    }
     if (saveListener) {
         saveListener.dispose();
     }
@@ -37,21 +33,12 @@ export function deactivate() {
 
 function getConfig() {
     const config = vscode.workspace.getConfiguration('fix-missing-semicolons');
-    const fixOnError = config.get<boolean>('fixOnError') ?? false;
     const fixOnSave = config.get<boolean>('fixOnSave') ?? true;
-    return { fixOnError, fixOnSave };
+    return { fixOnSave };
 }
 
 function updateConfig() {
-    const { fixOnError, fixOnSave } = getConfig();
-    if (fixOnError && !diagnosticListener) {
-        diagnosticListener = vscode.languages.onDidChangeDiagnostics(
-            handleDiagnosticUpdates
-        );
-    } else if (!fixOnError && diagnosticListener) {
-        diagnosticListener.dispose();
-        diagnosticListener = undefined;
-    }
+    const { fixOnSave } = getConfig();
 
     if (fixOnSave && !saveListener) {
         saveListener =
@@ -70,22 +57,6 @@ function getTargetEditor() {
         return null;
     }
     return activeEditor;
-}
-
-async function handleDiagnosticUpdates(
-    event: vscode.DiagnosticChangeEvent
-): Promise<void> {
-    const activeEditor = getTargetEditor();
-    if (!activeEditor) {
-        return;
-    }
-    // Check if any of the changed URIs match the active editor
-    const activeDocUri = activeEditor.document.uri;
-    if (!event.uris.some((uri) => uri.toString() === activeDocUri.toString())) {
-        return;
-    }
-
-    await checkAndFixDocument(activeEditor, true);
 }
 
 async function handleFixCommand() {
