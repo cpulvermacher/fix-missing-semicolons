@@ -62,14 +62,11 @@ function getTargetEditor() {
 async function handleFixCommand() {
     const activeEditor = getTargetEditor();
     if (activeEditor) {
-        await checkAndFixDocument(activeEditor, false);
+        await checkAndFixDocument(activeEditor);
     }
 }
 
-async function checkAndFixDocument(
-    editor: vscode.TextEditor,
-    avoidCursor: boolean
-) {
+async function checkAndFixDocument(editor: vscode.TextEditor) {
     const activeDocUri = editor.document.uri;
     const diagnostics = vscode.languages.getDiagnostics(activeDocUri);
 
@@ -84,10 +81,7 @@ async function checkAndFixDocument(
     if (allMissingSemicolonErrors && errors.length > 0) {
         for (const diagnostic of errors) {
             const insertPosition = diagnostic.range.end;
-            if (
-                hasSemicolon(editor.document, insertPosition) ||
-                (avoidCursor && isNearCursor(editor, insertPosition))
-            ) {
+            if (hasSemicolon(editor.document, insertPosition)) {
                 continue;
             }
 
@@ -123,17 +117,4 @@ function hasSemicolon(
         new vscode.Range(position.translate(0, -1), position.translate(0, 1))
     );
     return textAtPosition.includes(';');
-}
-
-/** returns true if cursor is in current or next line.
- * This helps avoid close statements
- * like
- * ```
- * someList
- *   .stream()
- * ```
- */
-function isNearCursor(editor: vscode.TextEditor, position: vscode.Position) {
-    const cursorLine = editor.selection.active.line;
-    return cursorLine === position.line || cursorLine === position.line + 1;
 }
