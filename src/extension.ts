@@ -9,7 +9,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand(
             'fix-missing-semicolons.fix',
-            handleFixCommand
+            onFixCommand
         )
     );
 
@@ -41,33 +41,39 @@ function updateConfig() {
     const { fixOnSave } = getConfig();
 
     if (fixOnSave && !saveListener) {
-        saveListener =
-            vscode.workspace.onWillSaveTextDocument(handleFixCommand);
+        saveListener = vscode.workspace.onWillSaveTextDocument(onWillSaveEvent);
     } else if (!fixOnSave && saveListener) {
         saveListener.dispose();
         saveListener = undefined;
     }
 }
 
-/** returns active editor if it contains a target language */
-function getTargetEditor() {
-    const activeEditor = vscode.window.activeTextEditor;
-    const languageId = activeEditor?.document.languageId || '';
-    if (!activeEditor || !supportedLanguageIds.includes(languageId)) {
+/** returns document if it contains a target language */
+function getTargetDocument(document: vscode.TextDocument | undefined) {
+    const languageId = document?.languageId || '';
+    if (!document || !supportedLanguageIds.includes(languageId)) {
         return null;
     }
-    return activeEditor;
+    return document;
 }
 
-async function handleFixCommand() {
-    const activeEditor = getTargetEditor();
-    if (activeEditor) {
-        await checkAndFixDocument(activeEditor);
+async function onFixCommand() {
+    const document = vscode.window.activeTextEditor?.document;
+    const targetDocument = getTargetDocument(document);
+    if (targetDocument) {
+        await checkAndFixDocument(targetDocument);
     }
 }
 
-async function checkAndFixDocument(editor: vscode.TextEditor) {
-    const activeDocUri = editor.document.uri;
+async function onWillSaveEvent(event: vscode.TextDocumentWillSaveEvent) {
+    const targetDocument = getTargetDocument(event.document);
+    if (targetDocument) {
+        await checkAndFixDocument(targetDocument);
+    }
+}
+
+async function checkAndFixDocument(document: vscode.TextDocument) {
+    const activeDocUri = document.uri;
     const diagnostics = vscode.languages.getDiagnostics(activeDocUri);
 
     const errors = diagnostics.filter(
@@ -81,7 +87,7 @@ async function checkAndFixDocument(editor: vscode.TextEditor) {
     if (allMissingSemicolonErrors && errors.length > 0) {
         for (const diagnostic of errors) {
             const insertPosition = diagnostic.range.end;
-            if (hasSemicolon(editor.document, insertPosition)) {
+            if (hasSemicolon(document, insertPosition)) {
                 continue;
             }
 
