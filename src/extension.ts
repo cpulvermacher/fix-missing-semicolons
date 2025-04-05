@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 
-const supportedLanguageIds = ['java'];
-const supportedDiagnosticSources = ['Java'];
+import { isTargetError, targetErrors } from './errorDefinitions';
+
+const supportedLanguageIds = targetErrors.map((error) => error.languageId);
+const supportedDiagnosticSources = targetErrors.map((error) => error.source);
 
 let saveListener: vscode.Disposable | undefined;
 
@@ -82,27 +84,18 @@ async function checkAndFixDocument(document: vscode.TextDocument) {
             d.source &&
             supportedDiagnosticSources.includes(d.source)
     );
-    const allMissingSemicolonErrors = errors.every(isMissingSemicolonError);
-
-    if (allMissingSemicolonErrors && errors.length > 0) {
-        for (const diagnostic of errors) {
-            const insertPosition = diagnostic.range.end;
-            if (hasSemicolon(document, insertPosition)) {
-                continue;
-            }
-
-            await applyFix(activeDocUri, insertPosition);
-        }
+    if (!errors.every(isTargetError) || errors.length === 0) {
+        return;
     }
-}
 
-function isMissingSemicolonError(diagnostic: vscode.Diagnostic): boolean {
-    const missingSemicolonJava =
-        diagnostic.severity === vscode.DiagnosticSeverity.Error &&
-        diagnostic.source === 'Java' &&
-        diagnostic.message.startsWith(`Syntax error, insert ";" to complete `);
+    for (const diagnostic of errors) {
+        const insertPosition = diagnostic.range.end;
+        if (hasSemicolon(document, insertPosition)) {
+            continue;
+        }
 
-    return missingSemicolonJava;
+        await applyFix(activeDocUri, insertPosition);
+    }
 }
 
 function applyFix(
