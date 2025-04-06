@@ -63,18 +63,23 @@ async function onFixCommand() {
     const document = vscode.window.activeTextEditor?.document;
     const targetDocument = getTargetDocument(document);
     if (targetDocument) {
-        await checkAndFixDocument(targetDocument);
+        const edits = checkDocument(targetDocument);
+        if (edits.length > 0) {
+            const edit = new vscode.WorkspaceEdit();
+            edit.set(targetDocument.uri, edits);
+            await vscode.workspace.applyEdit(edit);
+        }
     }
 }
 
-async function onWillSaveEvent(event: vscode.TextDocumentWillSaveEvent) {
+function onWillSaveEvent(event: vscode.TextDocumentWillSaveEvent) {
     const targetDocument = getTargetDocument(event.document);
     if (targetDocument) {
-        await checkAndFixDocument(targetDocument);
+        event.waitUntil(Promise.resolve(checkDocument(targetDocument)));
     }
 }
 
-async function checkAndFixDocument(document: vscode.TextDocument) {
+function checkDocument(document: vscode.TextDocument): vscode.TextEdit[] {
     const activeDocUri = document.uri;
     const diagnostics = vscode.languages.getDiagnostics(activeDocUri);
 
@@ -85,26 +90,23 @@ async function checkAndFixDocument(document: vscode.TextDocument) {
             supportedDiagnosticSources.includes(d.source)
     );
     if (!errors.every(isTargetError) || errors.length === 0) {
-        return;
+        return [];
     }
 
+    const fixes: vscode.TextEdit[] = [];
     for (const diagnostic of errors) {
         const insertPosition = diagnostic.range.end;
         if (hasSemicolon(document, insertPosition)) {
             continue;
         }
 
-        await applyFix(activeDocUri, insertPosition);
+        fixes.push(createFixEdit(insertPosition));
     }
+    return fixes;
 }
 
-function applyFix(
-    activeDocUri: vscode.Uri,
-    insertPosition: vscode.Position
-): Thenable<boolean> {
-    const edit = new vscode.WorkspaceEdit();
-    edit.insert(activeDocUri, insertPosition, ';');
-    return vscode.workspace.applyEdit(edit);
+function createFixEdit(insertPosition: vscode.Position): vscode.TextEdit {
+    return vscode.TextEdit.insert(insertPosition, ';');
 }
 
 function hasSemicolon(
