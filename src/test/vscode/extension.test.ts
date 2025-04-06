@@ -128,6 +128,15 @@ suite('Extension ', () => {
             15_000,
             500
         );
+
+        //check the file was saved with the fix applied (i.e. no unsaved changes)
+        await waitFor(() => {
+            assert.strictEqual(
+                vscode.window.activeTextEditor?.document.isDirty,
+                false,
+                'Document should not be dirty after saving'
+            );
+        });
     });
 
     test('does not insert missing semicolon if other syntax errors exist', async () => {
