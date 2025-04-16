@@ -1,5 +1,8 @@
 # Change Log
 
+## [0.3.5]
+- Same as 0.3.4
+
 ## [0.3.4] (pre-release)
 - Apply fix as pre-save edit (mostly cosmetic change)
 
