@@ -5,11 +5,14 @@
 [![Status](https://flat.badgen.net/github/checks/cpulvermacher/fix-missing-semicolons)](https://github.com/cpulvermacher/fix-missing-semicolons/actions/workflows/node.js.yml)
 [![License](https://flat.badgen.net/github/license/cpulvermacher/fix-missing-semicolons)](./LICENSE)
 
-Fix syntax errors for missing semicolons in Java automatically.
+Automatically fix Java syntax errors for missing semicolons.
 
 ## Features
-- Fixes any `Syntax error, insert ";"` errors found when saving the current Java file.
+- Saving a Java file automatically fixes any `Syntax error, insert ";"` errors found.
 - Does not insert semicolons if there are any other language errors in the file.
+
+## Limitations
+- May not work for cases like where the Java language server produces less clear syntax errors (e.g. lambda expressions).
 
 ## Why?
 Semicolon placement in Java is fairly unambiguous, to the point that the compiler or IDE integration will helpfully tell you exactly where you forgot to add it.
