@@ -7,6 +7,8 @@
 
 Automatically fix Java syntax errors for missing semicolons.
 
+![Demo](./images/demo.gif)
+
 ## Features
 - Saving a Java file automatically fixes any `Syntax error, insert ";"` errors found.
 - Does not insert semicolons if there are any other language errors in the file.
