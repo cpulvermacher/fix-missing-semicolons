@@ -1,5 +1,8 @@
 # Change Log
 
+## [0.3.6]
+- Add demo GIF.
+
 ## [0.3.5]
 - Same as 0.3.4
 
