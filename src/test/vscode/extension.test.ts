@@ -50,7 +50,10 @@ suite('Extension ', () => {
         const testFileUri = vscode.Uri.file(tempDir + `/${className}.java`);
         console.log(`Writing test file to ${testFileUri.fsPath}...`);
 
-        await vscode.workspace.fs.writeFile(testFileUri, Buffer.from(content));
+        await vscode.workspace.fs.writeFile(
+            testFileUri,
+            new TextEncoder().encode(content)
+        );
         return testFileUri;
     }
 
